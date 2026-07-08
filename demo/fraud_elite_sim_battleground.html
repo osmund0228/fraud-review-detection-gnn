@@ -1,0 +1,719 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 800px;
+                 background-color: #222222;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 100%;
+                 height: 800px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Prod_100">Prod_100</option>
+                                
+                                    <option value="Rev_834">Rev_834</option>
+                                
+                                    <option value="Usr_15426">Usr_15426</option>
+                                
+                                    <option value="Rev_835">Rev_835</option>
+                                
+                                    <option value="Usr_9175">Usr_9175</option>
+                                
+                                    <option value="Rev_836">Rev_836</option>
+                                
+                                    <option value="Usr_15427">Usr_15427</option>
+                                
+                                    <option value="Rev_837">Rev_837</option>
+                                
+                                    <option value="Usr_14881">Usr_14881</option>
+                                
+                                    <option value="Rev_838">Rev_838</option>
+                                
+                                    <option value="Usr_12275">Usr_12275</option>
+                                
+                                    <option value="Rev_839">Rev_839</option>
+                                
+                                    <option value="Usr_15456">Usr_15456</option>
+                                
+                                    <option value="Rev_840">Rev_840</option>
+                                
+                                    <option value="Usr_12265">Usr_12265</option>
+                                
+                                    <option value="Rev_841">Rev_841</option>
+                                
+                                    <option value="Usr_15462">Usr_15462</option>
+                                
+                                    <option value="Rev_842">Rev_842</option>
+                                
+                                    <option value="Usr_12264">Usr_12264</option>
+                                
+                                    <option value="Rev_843">Rev_843</option>
+                                
+                                    <option value="Usr_14879">Usr_14879</option>
+                                
+                                    <option value="Rev_844">Rev_844</option>
+                                
+                                    <option value="Usr_15468">Usr_15468</option>
+                                
+                                    <option value="Rev_845">Rev_845</option>
+                                
+                                    <option value="Usr_15470">Usr_15470</option>
+                                
+                                    <option value="Rev_846">Rev_846</option>
+                                
+                                    <option value="Usr_13396">Usr_13396</option>
+                                
+                                    <option value="Rev_847">Rev_847</option>
+                                
+                                    <option value="Usr_15500">Usr_15500</option>
+                                
+                                    <option value="Rev_848">Rev_848</option>
+                                
+                                    <option value="Usr_12431">Usr_12431</option>
+                                
+                                    <option value="Rev_849">Rev_849</option>
+                                
+                                    <option value="Usr_15504">Usr_15504</option>
+                                
+                                    <option value="Rev_850">Rev_850</option>
+                                
+                                    <option value="Usr_15507">Usr_15507</option>
+                                
+                                    <option value="Rev_851">Rev_851</option>
+                                
+                                    <option value="Usr_15508">Usr_15508</option>
+                                
+                                    <option value="Rev_852">Rev_852</option>
+                                
+                                    <option value="Usr_15515">Usr_15515</option>
+                                
+                                    <option value="Rev_853">Rev_853</option>
+                                
+                                    <option value="Usr_13636">Usr_13636</option>
+                                
+                                    <option value="Rev_854">Rev_854</option>
+                                
+                                    <option value="Usr_15532">Usr_15532</option>
+                                
+                                    <option value="Rev_855">Rev_855</option>
+                                
+                                    <option value="Usr_15541">Usr_15541</option>
+                                
+                                    <option value="Rev_856">Rev_856</option>
+                                
+                                    <option value="Usr_15543">Usr_15543</option>
+                                
+                                    <option value="Rev_857">Rev_857</option>
+                                
+                                    <option value="Usr_15562">Usr_15562</option>
+                                
+                                    <option value="Rev_858">Rev_858</option>
+                                
+                                    <option value="Usr_6729">Usr_6729</option>
+                                
+                                    <option value="Rev_859">Rev_859</option>
+                                
+                                    <option value="Usr_15569">Usr_15569</option>
+                                
+                                    <option value="Rev_860">Rev_860</option>
+                                
+                                    <option value="Usr_13757">Usr_13757</option>
+                                
+                                    <option value="Rev_861">Rev_861</option>
+                                
+                                    <option value="Usr_12427">Usr_12427</option>
+                                
+                                    <option value="Rev_862">Rev_862</option>
+                                
+                                    <option value="Usr_15577">Usr_15577</option>
+                                
+                                    <option value="Rev_863">Rev_863</option>
+                                
+                                    <option value="Usr_13875">Usr_13875</option>
+                                
+                                    <option value="Rev_864">Rev_864</option>
+                                
+                                    <option value="Usr_6523">Usr_6523</option>
+                                
+                                    <option value="Rev_865">Rev_865</option>
+                                
+                                    <option value="Usr_10814">Usr_10814</option>
+                                
+                                    <option value="Rev_866">Rev_866</option>
+                                
+                                    <option value="Usr_12463">Usr_12463</option>
+                                
+                                    <option value="Rev_867">Rev_867</option>
+                                
+                                    <option value="Usr_15599">Usr_15599</option>
+                                
+                                    <option value="Rev_868">Rev_868</option>
+                                
+                                    <option value="Usr_15601">Usr_15601</option>
+                                
+                                    <option value="Rev_869">Rev_869</option>
+                                
+                                    <option value="Usr_7413">Usr_7413</option>
+                                
+                                    <option value="Rev_870">Rev_870</option>
+                                
+                                    <option value="Usr_7155">Usr_7155</option>
+                                
+                                    <option value="Rev_871">Rev_871</option>
+                                
+                                    <option value="Usr_15613">Usr_15613</option>
+                                
+                                    <option value="Rev_872">Rev_872</option>
+                                
+                                    <option value="Usr_5713">Usr_5713</option>
+                                
+                                    <option value="Rev_873">Rev_873</option>
+                                
+                                    <option value="Usr_5707">Usr_5707</option>
+                                
+                                    <option value="Rev_874">Rev_874</option>
+                                
+                                    <option value="Usr_15616">Usr_15616</option>
+                                
+                                    <option value="Rev_875">Rev_875</option>
+                                
+                                    <option value="Usr_12388">Usr_12388</option>
+                                
+                                    <option value="Rev_876">Rev_876</option>
+                                
+                                    <option value="Usr_13754">Usr_13754</option>
+                                
+                                    <option value="Rev_877">Rev_877</option>
+                                
+                                    <option value="Usr_11069">Usr_11069</option>
+                                
+                                    <option value="Rev_878">Rev_878</option>
+                                
+                                    <option value="Usr_15627">Usr_15627</option>
+                                
+                                    <option value="Rev_879">Rev_879</option>
+                                
+                                    <option value="Usr_15629">Usr_15629</option>
+                                
+                                    <option value="Rev_880">Rev_880</option>
+                                
+                                    <option value="Usr_15633">Usr_15633</option>
+                                
+                                    <option value="Rev_881">Rev_881</option>
+                                
+                                    <option value="Usr_13848">Usr_13848</option>
+                                
+                                    <option value="Rev_882">Rev_882</option>
+                                
+                                    <option value="Usr_13588">Usr_13588</option>
+                                
+                                    <option value="Rev_883">Rev_883</option>
+                                
+                                    <option value="Usr_15640">Usr_15640</option>
+                                
+                                    <option value="Rev_884">Rev_884</option>
+                                
+                                    <option value="Usr_15644">Usr_15644</option>
+                                
+                                    <option value="Rev_885">Rev_885</option>
+                                
+                                    <option value="Usr_15648">Usr_15648</option>
+                                
+                                    <option value="Rev_886">Rev_886</option>
+                                
+                                    <option value="Usr_15653">Usr_15653</option>
+                                
+                                    <option value="Rev_887">Rev_887</option>
+                                
+                                    <option value="Usr_15657">Usr_15657</option>
+                                
+                                    <option value="Rev_888">Rev_888</option>
+                                
+                                    <option value="Usr_7871">Usr_7871</option>
+                                
+                                    <option value="Rev_889">Rev_889</option>
+                                
+                                    <option value="Usr_15659">Usr_15659</option>
+                                
+                                    <option value="Rev_890">Rev_890</option>
+                                
+                                    <option value="Usr_15669">Usr_15669</option>
+                                
+                                    <option value="Rev_891">Rev_891</option>
+                                
+                                    <option value="Usr_15674">Usr_15674</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#0088FF", "font": {"color": "white"}, "id": "Prod_100", "label": "TARGET RESTAURANT", "shape": "star", "size": 35.0}, {"borderWidth": 0, "color": "#FF3333", "color_border": "#FF3333", "font": {"color": "white"}, "id": "Rev_834", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #834] - \ud83d\udea8 [\ud328\ud134] \ud14d\uc2a4\ud2b8 \ubcf5\ubd99 \uc758\uc2ec\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc0ac\uae30(Fake) (99.6% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc0ac\uae30(Fake)\n\u2b50\u2b50\u2b50 3.0\uc810 | \ud83d\udcc5 2014-05-30\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nWe ate at the Blue Ribbon with colleagues. The New York strip was well cooked and tasty, however the trout was greasy and ruined the flavour of what w...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15426", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#FF3333", "color_border": "#FF3333", "font": {"color": "white"}, "id": "Rev_835", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #835] - \ud83d\udea8 [\ud328\ud134] \ud14d\uc2a4\ud2b8 \ubcf5\ubd99 \uc758\uc2ec\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc0ac\uae30(Fake) (99.6% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc0ac\uae30(Fake)\n\u2b50\u2b50\u2b50 3.0\uc810 | \ud83d\udcc5 2014-03-30\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nWe ate at the Blue Ribbon with colleagues. The New York strip was well cooked and tasty, however the trout was greasy and ruined the flavour of what w...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_9175", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#FF3333", "color_border": "#FF3333", "font": {"color": "white"}, "id": "Rev_836", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #836] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc0ac\uae30(Fake) (97.1% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc0ac\uae30(Fake)\n\u2b50\u2b50\u2b50 3.0\uc810 | \ud83d\udcc5 2014-01-28\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nWent here after midnight and got in with no wait, but the restaurant was definitely full. It\u0027s known for being a late night eatery and no kidding! My ...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15427", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#FF3333", "color_border": "#FF3333", "font": {"color": "white"}, "id": "Rev_837", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #837] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc0ac\uae30(Fake) (98.8% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc0ac\uae30(Fake)\n\u2b50\u2b50\u2b50 4.0\uc810 | \ud83d\udcc5 2014-11-12\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nExcellent spot for late night dining -grilled calamari is a favorite.\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_14881", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#FF3333", "color_border": "#FF3333", "font": {"color": "white"}, "id": "Rev_838", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #838] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc0ac\uae30(Fake) (99.0% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc0ac\uae30(Fake)\n\u2b50\u2b50\u2b50 4.0\uc810 | \ud83d\udcc5 2014-09-18\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nIt is hard to get seated here as the restaurant is small and extremely popular. However it is worth the wait. The menu is home cooked style. The artic...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_12275", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#FF3333", "color_border": "#FF3333", "font": {"color": "white"}, "id": "Rev_839", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #839] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc0ac\uae30(Fake) (98.7% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc0ac\uae30(Fake)\n\u2b50\u2b50\u2b50 5.0\uc810 | \ud83d\udcc5 2014-09-21\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nGreat atmosphere - just like a favourite brasserie in Paris except the service here was polite and helpful (unlike Parisians!) with thought through re...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15456", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#FF3333", "color_border": "#FF3333", "font": {"color": "white"}, "id": "Rev_840", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #840] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc0ac\uae30(Fake) (99.1% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc0ac\uae30(Fake)\n\u2b50\u2b50\u2b50 5.0\uc810 | \ud83d\udcc5 2014-07-24\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nRecommendations .. The Chicken with a side of honey to dip in.. Delicious!!!! \u0026 the French onion soup is great! Don\u0027t forget an ice tea (super refresh...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_12265", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#FF3333", "color_border": "#FF3333", "font": {"color": "white"}, "id": "Rev_841", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #841] - \ud83d\udea8 [\ud328\ud134] \ud14d\uc2a4\ud2b8 \ubcf5\ubd99 \uc758\uc2ec\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc0ac\uae30(Fake) (99.7% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc0ac\uae30(Fake)\n\u2b50\u2b50\u2b50 5.0\uc810 | \ud83d\udcc5 2014-02-25\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nFriendly service. Amazing food-the appetizers were a welcome surprise to the wonderful meal that followed. the fried chicken is as good (better) then ...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15462", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#FF3333", "color_border": "#FF3333", "font": {"color": "white"}, "id": "Rev_842", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #842] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc0ac\uae30(Fake) (99.7% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc0ac\uae30(Fake)\n\u2b50\u2b50\u2b50 5.0\uc810 | \ud83d\udcc5 2014-02-12\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nBlue Ribbon has a neighborhood feel. The oysters are wonderful, local brews are great and they have nice wine selection. We had apps at the bar becaus...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_12264", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#FF3333", "color_border": "#FF3333", "font": {"color": "white"}, "id": "Rev_843", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #843] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc0ac\uae30(Fake) (97.7% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc0ac\uae30(Fake)\n\u2b50\u2b50\u2b50 5.0\uc810 | \ud83d\udcc5 2014-01-29\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nI first read about this in several food magazines--they kept asking famous chefs where they liked to eat. several times in the course of a year, the a...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_14879", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#FF3333", "color_border": "#FF3333", "font": {"color": "white"}, "id": "Rev_844", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #844] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc0ac\uae30(Fake) (99.9% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc0ac\uae30(Fake)\n\u2b50\u2b50\u2b50 5.0\uc810 | \ud83d\udcc5 2014-01-20\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nThis is a SUPER busy establishment so be sure to make reservations ahead of time Its also very tight in there so be warned. The thought of eating any ...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15468", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#FF3333", "color_border": "#FF3333", "font": {"color": "white"}, "id": "Rev_845", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #845] - \ud83d\udea8 [\ud328\ud134] \ud14d\uc2a4\ud2b8 \ubcf5\ubd99 \uc758\uc2ec\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc0ac\uae30(Fake) (93.1% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc0ac\uae30(Fake)\n\u2b50\u2b50\u2b50 5.0\uc810 | \ud83d\udcc5 2014-01-14\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nFriendly service. Amazing food-the appetizers were a welcome surprise to the wonderful meal that followed. the fried chicken is as good (better) then ...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15470", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#FF3333", "color_border": "#FF3333", "font": {"color": "white"}, "id": "Rev_846", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #846] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc0ac\uae30(Fake) (99.9% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc0ac\uae30(Fake)\n\u2b50\u2b50\u2b50 5.0\uc810 | \ud83d\udcc5 2013-11-27\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nSecond only to Blue Ribbon Bakery in my mind. Get the fondue, ribs and/or poo poo platter. If you don\u0027t get the fried chicken you\u0027re fooling yourself....\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_13396", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_847", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #847] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.0% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 3.0\uc810 | \ud83d\udcc5 2015-01-05\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nI am a vegetarian who came here with my sushi friends so I don\u0027t expect much. Though there are a few options, like the eggplant and a veggie roll, I w...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15500", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_848", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #848] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.0% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 2.0\uc810 | \ud83d\udcc5 2014-12-14\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nCame here with high expectations but was disappointed. Had a fondue app to start which was pretty good but not amazing. Ordered the salmon as the main...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_12431", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_849", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #849] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (23.5% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 5.0\uc810 | \ud83d\udcc5 2014-12-10\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nThe food here is superb. I enjoy their paella- it always proves to be a satisfying meal. This place has a great atmosphere with friendly staff. This i...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15504", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_850", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #850] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.5% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 4.0\uc810 | \ud83d\udcc5 2014-11-18\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nI came here for the seafood. Everything was fresh. I didnt like the setup of the seating that much, seemed crowded but that is just me!\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15507", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_851", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #851] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.0% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 5.0\uc810 | \ud83d\udcc5 2014-11-09\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nI love this place whenever I\u0027m craving a fried chicken sandwich. Get the classic Blue Ribbon sandwich and add jalapenos. You won\u0027t regret it, unless y...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15508", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_852", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #852] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.0% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 4.0\uc810 | \ud83d\udcc5 2014-10-14\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nTwo of us arrived at 7PM on a Saturday and were seated in about 10 minutes. Nice. Ordered raw scallops and oysters to start. Very fresh, great flavor ...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15515", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_853", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #853] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (2.3% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 4.0\uc810 | \ud83d\udcc5 2014-08-04\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nReturning for sure! The menu is so extensive and full of variety. I honestly couldn\u0027t really decide what to order so between two people we kind of ord...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_13636", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_854", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #854] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.1% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 3.0\uc810 | \ud83d\udcc5 2014-08-01\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nWhat can I say about Blue Ribbon that hasn\u0027t been said? Reviews always represent a little insight into who we are, where we have been, and what we are...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15532", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_855", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #855] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.0% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 5.0\uc810 | \ud83d\udcc5 2014-06-27\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nYou\u0027re drunk at 3:30am on a Sunday. Clearly you are making all the right choices, so why not continue to indulge yourself at the best late night resta...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15541", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_856", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #856] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.0% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 4.0\uc810 | \ud83d\udcc5 2014-06-25\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nVery solid dinner experience all around, for sho. It\u0027s one of the few places in the city where you don\u0027t have to yell over everyone to be heard at the...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15543", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_857", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #857] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.0% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 5.0\uc810 | \ud83d\udcc5 2014-03-25\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nI looooveee Blue Ribbon. I am fascinated by any place that serves awesome food at 2am. I had the fried chicken with mashed potatoes and collard greens...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15562", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_858", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #858] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.7% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 4.0\uc810 | \ud83d\udcc5 2014-03-23\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\n4-5 stars for this great cozy place which serves some very good food. \u00a0Went here after aquagrill did not accurately communicate their wait times for f...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_6729", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_859", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #859] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.0% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 4.0\uc810 | \ud83d\udcc5 2014-02-26\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nAfter checking out the blue ribbon sushi I thought it would only be fitting to try their american counterpart. The decor inside had a touch of romanti...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15569", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_860", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #860] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.0% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 4.0\uc810 | \ud83d\udcc5 2014-02-25\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nCame here with my bf on a Sunday night, seated right away since it wasn\u0027t busy. Our server was great! Service over all in my opinion was friendly and ...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_13757", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_861", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #861] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (17.7% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 4.0\uc810 | \ud83d\udcc5 2014-01-19\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nDinner wasn\u0027t that great but I think this place has one of the best brunches in the city. \u00a0I usually have the eggs benedict and its delicious.\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_12427", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_862", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #862] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.0% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 3.0\uc810 | \ud83d\udcc5 2014-01-10\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nCame here for our monthly friends dinner get together. Note they do take reservations of 5 or more but all people have to be present to be seated. The...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15577", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_863", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #863] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.0% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 3.0\uc810 | \ud83d\udcc5 2014-01-06\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nI came here on New Years Eve with a few friends for dinner before the festivities began. \u00a0With all the rave reviews, I suppose I had pretty high hopes...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_13875", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_864", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #864] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.2% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 3.0\uc810 | \ud83d\udcc5 2013-12-01\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nThe ambiance was lovely and the food pretty good.\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_6523", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_865", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #865] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.0% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 5.0\uc810 | \ud83d\udcc5 2013-10-21\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nSuch a great date night spot! Friendly staff, good food and great drinks. Highlights are the fried chicken and catfish. Be prepared to wait for a bit ...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_10814", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_866", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #866] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.0% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 5.0\uc810 | \ud83d\udcc5 2013-10-07\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nI saw John Legend coming out of a brownstone when I walked out of Blue Ribbon. And. He. Looked. At. Me. That alone is enough to give this place 5 star...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_12463", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_867", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #867] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (22.8% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 5.0\uc810 | \ud83d\udcc5 2013-09-16\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nDo you want to know the difference between a restaurant that is great and one that is merely good? I could regale you with particulars like the mouthw...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15599", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_868", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #868] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.0% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 4.0\uc810 | \ud83d\udcc5 2013-09-11\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nOne thing on my bucket list that I needed to check off before leaving New York was trying the fried chicken at Blue Ribbon. Even though we put our nam...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15601", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_869", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #869] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (1.2% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 2.0\uc810 | \ud83d\udcc5 2013-07-26\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\none night i was just really craving some bone marrow goodness so i checked out yelp and voila here i was ! the bone marrow was AMAZING. paired with th...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_7413", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_870", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #870] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.2% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 4.0\uc810 | \ud83d\udcc5 2013-07-17\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nPrompted to come to their Soho location because during Googa Mooga I tried their amazing fried chicken. \u00a0And it only tastes better in their store. \u00a0It...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_7155", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_871", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #871] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (1.5% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 4.0\uc810 | \ud83d\udcc5 2013-07-10\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nThe bone marrow and marmalade. Oh. My. Goodness. It was my first experience with bone marrow, and I\u0027m sold! Everything else we had was delicious too, ...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15613", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_872", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #872] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.3% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 3.0\uc810 | \ud83d\udcc5 2013-07-04\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nMy friends and I went on a fried chicken hunt throughout the city and we had to stop by Blue Ribbon. $25.50 gets you a drumstick, wing and thigh with ...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_5713", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_873", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #873] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.0% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 3.0\uc810 | \ud83d\udcc5 2013-07-01\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nDecor: 3/5 -Appears to be a fancy seafood restaurant but the booth cloths were dirty Service: 3/5 -overall decent but he ignored our table for a while...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_5707", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 6, "color": "#FF3333", "color_border": "#FFFF00", "font": {"color": "white"}, "id": "Rev_874", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #874] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc0ac\uae30(Fake) (87.2% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 5.0\uc810 | \ud83d\udcc5 2013-06-30\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nThis place is intimate and service was great. The waiters are knowledgeable and the food was out of this world. Everything was so fresh. I highly reco...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15616", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_875", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #875] - \ud83d\udea8 [\ud328\ud134] \ud14d\uc2a4\ud2b8 \ubcf5\ubd99 \uc758\uc2ec\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.6% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 3.0\uc810 | \ud83d\udcc5 2013-06-20\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nyep, oysters!\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_12388", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_876", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #876] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.0% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 4.0\uc810 | \ud83d\udcc5 2013-06-15\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nI LOVE Blue Ribbon Brasserie! Every time I\u0027ve been, the food and service have been outstanding. You can\u0027t go wrong with anything you get, but if you n...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_13754", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_877", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #877] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.1% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 3.0\uc810 | \ud83d\udcc5 2013-06-01\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nI was surprisingly not impressed by the place. I was expecting so much more. The food is not bad, it is average to my taste. And not refined. Very Ame...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_11069", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_878", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #878] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.0% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 4.0\uc810 | \ud83d\udcc5 2013-05-27\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nOld school classy place - even when you walk in wearing old tshirt and flip flops because you are tired of shopping all day and starving, waiters stil...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15627", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_879", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #879] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (35.2% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 5.0\uc810 | \ud83d\udcc5 2013-05-19\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nThis is by far one of my favorite restaurants in NYC! The restaurant is dark and intimate and filled with attractive downtown couples. A friend of min...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15629", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_880", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #880] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (6.7% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 4.0\uc810 | \ud83d\udcc5 2013-05-14\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nI liked this place. We had a party of 4 and we all arrived at different times. So the guy on tables said to let him know as soon as we all got there. ...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15633", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_881", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #881] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.1% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 3.0\uc810 | \ud83d\udcc5 2013-05-14\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nI had high hopes but they weren\u0027t really lived up to. The kumomoto oysters were delicious and the bone marrow with oxtail marmalade was fabulous. \u00a0But...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_13848", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_882", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #882] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.0% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 4.0\uc810 | \ud83d\udcc5 2013-04-16\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nAs everyone\u0027s already mentioned, this place has AMAZING bone marrow. We were rash enough to order 2 bone marrow appetizers between the two of us, whic...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_13588", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_883", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #883] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.5% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 5.0\uc810 | \ud83d\udcc5 2013-04-09\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nI would come here over and over again for the onion marmalade alone. We called a few minutes ahead of time to make sure there was room for our party o...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15640", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_884", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #884] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (3.6% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 4.0\uc810 | \ud83d\udcc5 2013-04-04\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nOne of my girlfriend took me here for my birthday after that i always came back i love their uni. a glass of plum wine. came here order a big sushi bo...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15644", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_885", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #885] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.0% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 5.0\uc810 | \ud83d\udcc5 2013-03-09\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nGreat restaurant all the way around. Spectacular food, service, ambiance. I came for an early dinner and was lucky that it wasn\u0027t very crowded yet. Bu...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15648", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_886", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #886] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (41.1% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 5.0\uc810 | \ud83d\udcc5 2013-02-19\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nFried chicken in the wee hours of the mornin\u0027, y\u0027all...... Oysters good (haven\u0027t had a bad one here). Goat cheese salad good. Duck good. Rack of lamb ...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15653", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_887", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #887] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.0% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 5.0\uc810 | \ud83d\udcc5 2013-02-10\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nWOW! I\u0027m so excited my friend took me here!! Came here during the blizzard so it was not crowded at all. Got seated and right away we got bread... nic...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15657", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_888", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #888] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.0% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 4.0\uc810 | \ud83d\udcc5 2013-01-30\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nThis is one of those landmark/must-visit places full of tourists but the food IS quite good with some pretty eclectic offerings including roasted pige...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_7871", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_889", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #889] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.0% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 2.0\uc810 | \ud83d\udcc5 2013-01-29\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nMeh. I expected a lot more out from Blueribbon. \u00a0I had the beef marrow and oxtail marmalade which didn\u0027t really have any unique taste. \u00a0 The French on...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15659", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_890", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #890] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (0.0% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 2.0\uc810 | \ud83d\udcc5 2013-01-14\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nI think I will get hated on for this rating by those close to me. The people I came with LOVED this place. They loved the location, the presentation o...\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15669", "label": "User", "shape": "dot", "size": 10.0}, {"borderWidth": 0, "color": "#33CC33", "color_border": "#33CC33", "font": {"color": "white"}, "id": "Rev_891", "label": "Rev", "shape": "dot", "size": 15.0, "title": "[\ub9ac\ubdf0 #891] - \u26aa \uc77c\ubc18 \ub9ac\ubdf0\n-------------------------\n\ud83e\udd16 AI \uc608\uce21: \uc815\uc0c1(Real) (41.9% \ud655\uc2e0)\n\u2705 \uc2e4\uc81c \uc815\ub2f5: \uc815\uc0c1(Real)\n\u2b50\u2b50\u2b50 5.0\uc810 | \ud83d\udcc5 2013-01-08\n-------------------------\n\ud83d\udcdd \ub9ac\ubdf0 \uc6d0\ubb38:\nprobably our favorite all purpose restaurant/s in ny. steak tartar and chicken burgers are well worth the drive themselves.\n"}, {"color": "#777777", "font": {"color": "white"}, "id": "Usr_15674", "label": "User", "shape": "dot", "size": 10.0}]);
+                  edges = new vis.DataSet([{"alpha": 0.3, "color": "#444444", "from": "Usr_15426", "to": "Rev_834"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_834", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_9175", "to": "Rev_835"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_835", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15427", "to": "Rev_836"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_836", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_14881", "to": "Rev_837"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_837", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_12275", "to": "Rev_838"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_838", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15456", "to": "Rev_839"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_839", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_12265", "to": "Rev_840"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_840", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15462", "to": "Rev_841"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_841", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_12264", "to": "Rev_842"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_842", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_14879", "to": "Rev_843"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_843", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15468", "to": "Rev_844"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_844", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15470", "to": "Rev_845"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_845", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_13396", "to": "Rev_846"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_846", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15500", "to": "Rev_847"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_847", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_12431", "to": "Rev_848"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_848", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15504", "to": "Rev_849"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_849", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15507", "to": "Rev_850"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_850", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15508", "to": "Rev_851"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_851", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15515", "to": "Rev_852"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_852", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_13636", "to": "Rev_853"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_853", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15532", "to": "Rev_854"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_854", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15541", "to": "Rev_855"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_855", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15543", "to": "Rev_856"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_856", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15562", "to": "Rev_857"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_857", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_6729", "to": "Rev_858"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_858", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15569", "to": "Rev_859"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_859", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_13757", "to": "Rev_860"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_860", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_12427", "to": "Rev_861"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_861", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15577", "to": "Rev_862"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_862", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_13875", "to": "Rev_863"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_863", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_6523", "to": "Rev_864"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_864", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_10814", "to": "Rev_865"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_865", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_12463", "to": "Rev_866"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_866", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15599", "to": "Rev_867"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_867", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15601", "to": "Rev_868"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_868", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_7413", "to": "Rev_869"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_869", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_7155", "to": "Rev_870"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_870", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15613", "to": "Rev_871"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_871", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_5713", "to": "Rev_872"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_872", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_5707", "to": "Rev_873"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_873", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15616", "to": "Rev_874"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_874", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_12388", "to": "Rev_875"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_875", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_13754", "to": "Rev_876"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_876", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_11069", "to": "Rev_877"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_877", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15627", "to": "Rev_878"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_878", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15629", "to": "Rev_879"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_879", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15633", "to": "Rev_880"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_880", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_13848", "to": "Rev_881"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_881", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_13588", "to": "Rev_882"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_882", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15640", "to": "Rev_883"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_883", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15644", "to": "Rev_884"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_884", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15648", "to": "Rev_885"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_885", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15653", "to": "Rev_886"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_886", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15657", "to": "Rev_887"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_887", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_7871", "to": "Rev_888"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_888", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15659", "to": "Rev_889"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_889", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15669", "to": "Rev_890"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_890", "to": "Prod_100"}, {"alpha": 0.3, "color": "#444444", "from": "Usr_15674", "to": "Rev_891"}, {"alpha": 0.3, "color": "#444444", "from": "Rev_891", "to": "Prod_100"}, {"color": "#00CED1", "from": "Rev_834", "title": "\ud83d\udea8 [DNA \uc720\uc0ac\ub3c4] \ud14d\uc2a4\ud2b8 \ubcf5\ubd99 \ud655\uc815", "to": "Rev_835", "width": 5.0}, {"color": "#00CED1", "from": "Rev_841", "title": "\ud83d\udea8 [DNA \uc720\uc0ac\ub3c4] \ud14d\uc2a4\ud2b8 \ubcf5\ubd99 \ud655\uc815", "to": "Rev_845", "width": 5.0}, {"color": "#9B59B6", "from": "Rev_859", "title": "\ud83d\udfe3 [\uc2dc\uac04] \ub3d9\uc2dc \ubcc4\uc810 \ud22c\ucc99", "to": "Rev_860", "width": 1.5}, {"color": "#9B59B6", "from": "Rev_862", "title": "\ud83d\udfe3 [\uc2dc\uac04] \ub3d9\uc2dc \ubcc4\uc810 \ud22c\ucc99", "to": "Rev_863", "width": 1.5}, {"color": "#9B59B6", "from": "Rev_872", "title": "\ud83d\udfe3 [\uc2dc\uac04] \ub3d9\uc2dc \ubcc4\uc810 \ud22c\ucc99", "to": "Rev_873", "width": 1.5}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "barnesHut": {
+            "avoidOverlap": 0,
+            "centralGravity": 0.3,
+            "damping": 0.09,
+            "gravitationalConstant": -2500,
+            "springConstant": 0.001,
+            "springLength": 250
+        },
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
